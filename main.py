@@ -4,6 +4,8 @@ import logging
 from dotenv import load_dotenv
 import os
 import json
+import base64
+import hashlib
 
 # Set up environment
 load_dotenv()
@@ -81,6 +83,25 @@ bot = commands.Bot(command_prefix=prefix, intents=intents)
 async def on_ready():
     print(f"{bot.user.name}, reporting for duty!")
 
+# ================================================================================================ #
+# ================================================================================================ #
+# ========================================== TWITTER ============================================= #
+# ================================================================================================ #
+# ================================================================================================ #
+
+def get_twitter_auth_url():
+    random_bytes = os.urandom(32)
+    code_verifier = base64.urlsafe_b64encode(random_bytes).decode('ascii').rstrip('=')
+    hashed = hashlib.sha256(code_verifier.encode('ascii')).digest()
+    code_challenge = base64.urlsafe_b64encode(hashed).decode('ascii').rstrip('=')
+    return f"https://twitter.com/i/oauth2/authorize?response_type=code&client_id={twitter_client_id}&redirect_uri={twitter.get("redirect_uri","")}&scope=tweet.write&state=random_string&code_challenge={code_challenge}&code_challenge_method=S256"
+
+# ================================================================================================ #
+# ================================================================================================ #
+# ====================================== PREFIX COMMANDS ========================================= #
+# ================================================================================================ #
+# ================================================================================================ #
+
 # Register channel for message monitoring
 @bot.command()
 async def _sub(ctx, *, msg):
@@ -117,6 +138,18 @@ async def _unsub(ctx, *, msg):
     except ValueError:
         await ctx.reply(f"{msg} is not a valid channel id")
 
+# Set up twitter instance
+@bot.command()
+async def _twitter(ctx):
+    print(1)
+    await ctx.reply(f"Please visit {get_twitter_auth_url()} to authenticate the bot!")
+
+# ================================================================================================ #
+# ================================================================================================ #
+# ========================================== SWIZZLES ============================================ #
+# ================================================================================================ #
+# ================================================================================================ #
+
 # Monitor messages sent in channels
 @bot.event
 async def on_message(message):
@@ -135,6 +168,12 @@ async def on_message(message):
     # NOTE: always required, this function is effectively an override allows continued
     # handling of other messages
     await bot.process_commands(message)
+
+# ================================================================================================ #
+# ================================================================================================ #
+# ========================================== BOT SETUP =========================================== #
+# ================================================================================================ #
+# ================================================================================================ #
 
 # Configure and run the bot
 load_config()
