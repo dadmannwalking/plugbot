@@ -1,17 +1,10 @@
 {
-    "twitter": {
-        "enabled": false
-    },
-    "bluesky": {
-        "enabled": false
-    },
-    "facebook": {
-        "enabled": false
-    },
-    "reddit": {
-        "enabled": false
-    },
-    "instagram": {
-        "enabled": false
-    }
+    "name": "plugbot",
+    "prefix": "!pb",
+    "watch_channels": [],
+    "twitter": null,
+    "bluesky": null,
+    "facebook": null,
+    "reddit": null,
+    "instagram": null
 }

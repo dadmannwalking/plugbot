@@ -30,41 +30,42 @@ instagram = None
 
 # Load config from config.json file
 def load_config():
+    global bot_name
+    global prefix
+    global watch_channels
+    global twitter
+    global bluesky
+    global facebook
+    global reddit
+    global instagram
+
     with open("config.json", "r") as file:
-        global bot_name
-        global prefix
-        global watch_channels
-        global twitter
-        global bluesky
-        global facebook
-        global reddit
-        global instagram
-
         data = json.load(file)
+        bot_name = data.get("name", "plugbot")
+        prefix = data.get("prefix", "!pb")
+        watch_channels = data.get("watch_channels", [])
+        twitter = data.get("twitter", None)
+        bluesky = data.get("bluesky", None)
+        facebook = data.get("facebook", None)
+        reddit = data.get("reddit", None)
+        instagram = data.get("instagram", None)
 
-        if data["name"] and data["name"] != "":
-            bot_name = data["name"]
+        print(prefix)
 
-        if data["prefix"] and data["prefix"] != "":
-            prefix = data["prefix"]
+def update_config():
+    payload = dict()
+    payload["name"] = bot_name
+    payload["prefix"] = prefix
+    payload["watch_channels"] = watch_channels
+    payload["twitter"] = twitter
+    payload["bluesky"] = bluesky
+    payload["facebook"] = facebook
+    payload["reddit"] = reddit
+    payload["instagram"] = instagram
+    
+    with open("config.json", "w") as file: 
+        json.dump(payload, file, indent=4)
 
-        if data["watch_channels"] and data["watch_channels"] != []:
-            watch_channels = data["watch_channels"]
-            
-        if data["twitter"]:
-            twitter = data["twitter"]
-            
-        if data["bluesky"]:
-            bluesky = data["bluesky"]
-            
-        if data["facebook"]:
-            facebook = data["facebook"]
-            
-        if data["reddit"]:
-            reddit = data["reddit"]
-            
-        if data["instagram"]:
-            instagram = data["instagram"]
 
 # Set up bot to listen for prefix commands
 bot = commands.Bot(command_prefix=prefix, intents=intents)
@@ -82,12 +83,14 @@ async def on_ready():
 @bot.command()
 async def _sub(ctx, *, msg):
     watch_channels.append(msg)
+    update_config()
     await ctx.reply(f"{msg} has been added to monitored channels, channels are now {watch_channels}")
 
 # Remove channel from message monitoring
 @bot.command()
 async def _unsub(ctx, *, msg):
     watch_channels.remove(msg)
+    update_config()
     await ctx.reply(f"{msg} has been removed from monitored channels, channels are now {watch_channels}")
 
 # Monitor messages sent in channels
