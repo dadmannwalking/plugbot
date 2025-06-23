@@ -19,8 +19,8 @@ intents.members = True
 
 # Local variables
 prefix = "!pb"
-bot_name = "plugbot"
-watch_channels = []
+configuration_role = "admin"
+watched_channels = []
 
 twitter = None
 bluesky = None
@@ -30,9 +30,9 @@ instagram = None
 
 # Load config from config.json file
 def load_config():
-    global bot_name
     global prefix
-    global watch_channels
+    global configuration_role
+    global watched_channels
     global twitter
     global bluesky
     global facebook
@@ -41,22 +41,20 @@ def load_config():
 
     with open("config.json", "r") as file:
         data = json.load(file)
-        bot_name = data.get("name", "plugbot")
         prefix = data.get("prefix", "!pb")
-        watch_channels = data.get("watch_channels", [])
+        configuration_role = data.get("configuration_role", "admin")
+        watched_channels = data.get("watched_channels", [])
         twitter = data.get("twitter", None)
         bluesky = data.get("bluesky", None)
         facebook = data.get("facebook", None)
         reddit = data.get("reddit", None)
         instagram = data.get("instagram", None)
 
-        print(prefix)
-
 def update_config():
     payload = dict()
-    payload["name"] = bot_name
     payload["prefix"] = prefix
-    payload["watch_channels"] = watch_channels
+    payload["configuration_role"] = configuration_role
+    payload["watched_channels"] = watched_channels
     payload["twitter"] = twitter
     payload["bluesky"] = bluesky
     payload["facebook"] = facebook
@@ -66,6 +64,14 @@ def update_config():
     with open("config.json", "w") as file: 
         json.dump(payload, file, indent=4)
 
+# For some reason, commands.has_role() does not like the role being configured via json,
+# so this function will determine if a given user has authorization to use a protected
+# function
+def authorized(user):
+    for role in user.roles:
+        if role.name == configuration_role:
+            return True
+    return False
 
 # Set up bot to listen for prefix commands
 bot = commands.Bot(command_prefix=prefix, intents=intents)
@@ -77,33 +83,53 @@ async def on_ready():
 # Register channel for message monitoring
 @bot.command()
 async def _sub(ctx, *, msg):
-    watch_channels.append(msg)
-    update_config()
-    await ctx.reply(f"{msg} has been added to monitored channels, channels are now {watch_channels}")
+    if authorized(ctx.author) == False:
+        print("user is not authorized")
+        return
+    
+    try:
+        channel_id = int(msg)
+        if channel_id in watched_channels:
+            await ctx.reply(f"{channel_id} is already monitored {watched_channels}")
+        else:
+            watched_channels.append(channel_id)
+            update_config()
+            await ctx.reply(f"added {channel_id} to monitored channels {watched_channels}")
+    except ValueError:
+        await ctx.reply(f"{msg} is not a valid channel id")
 
 # Remove channel from message monitoring
 @bot.command()
 async def _unsub(ctx, *, msg):
-    watch_channels.remove(msg)
-    update_config()
-    await ctx.reply(f"{msg} has been removed from monitored channels, channels are now {watch_channels}")
+    if authorized(ctx.author) == False:
+        print("user is not authorized")
+        return
+
+    try:
+        channel_id = int(msg)
+        if channel_id in watched_channels:
+            watched_channels.remove(channel_id)
+            update_config()
+            await ctx.reply(f"removed {channel_id} from monitored channels {watched_channels}")
+        else:
+            await ctx.reply(f"{channel_id} not in watched channels...")
+    except ValueError:
+        await ctx.reply(f"{msg} is not a valid channel id")
 
 # Monitor messages sent in channels
 @bot.event
 async def on_message(message):
     if message.author == bot.user:
         return
-    
-    # Example: Swear word filter
-    # for word in swear_words:
-    #     if word in message.content.lower():
-    #         await message.delete()
-    #         await message.channel.send(f"{message.author.mention} please mind your profanity...")
 
     # Watch for updates that should be posted to social media
-    for channel in watch_channels:
-        if message.channel.name == channel:
-            print("should send social media message")
+    for channel in watched_channels:
+        try:
+            channel_id = int(channel)
+            if message.channel.id == channel_id:
+                print(f"should send {message} to social media")
+        except ValueError:
+            print("")
 
     # NOTE: always required, this function is effectively an override allows continued
     # handling of other messages

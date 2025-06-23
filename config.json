@@ -1,7 +1,9 @@
 {
-    "name": "plugbot",
     "prefix": "!pb",
-    "watch_channels": [],
+    "configuration_role": "mod",
+    "watched_channels": [
+        920319014503329832
+    ],
     "twitter": null,
     "bluesky": null,
     "facebook": null,

@@ -1,6 +1,6 @@
 {
-    "name": "dadmann.bot",
     "prefix": "!bot",
+    "configuration_role": "mod",
     "watch_channels" : [
         911317508768825397
     ],
