@@ -74,11 +74,6 @@ bot = commands.Bot(command_prefix=prefix, intents=intents)
 async def on_ready():
     print(f"{bot.user.name}, reporting for duty!")
 
-# @bot.event
-# async def on_member_join(member):
-#     # Will send as a DM; how to send as a reply??
-#     await member.send(f"Welcome to the server {member.name}")
-
 # Register channel for message monitoring
 @bot.command()
 async def _sub(ctx, *, msg):

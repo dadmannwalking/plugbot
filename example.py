@@ -32,6 +32,11 @@ async def on_ready():
 
 secret_role = "cool kid"
 
+@bot.event
+async def on_member_join(member):
+    # Will send as a DM; how to send as a reply??
+    await member.send(f"Welcome to the server {member.name}")
+
 # DM user who uses the !hello command
 @bot.command()
 async def hello(ctx):
