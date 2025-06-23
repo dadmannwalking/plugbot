@@ -8,6 +8,7 @@ import json
 # Set up environment
 load_dotenv()
 token = os.getenv('DISCORD_TOKEN')
+twitter_client_id = os.getenv('TWITTER_CLIENT_ID')
 handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
 
 # Set up intents
