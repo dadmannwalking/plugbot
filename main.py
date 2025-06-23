@@ -3,6 +3,7 @@ from discord.ext import commands
 import logging
 from dotenv import load_dotenv
 import os
+import json
 
 # Set up environment
 load_dotenv()
@@ -17,16 +18,53 @@ intents.message_content = True
 intents.members = True
 
 # Local variables
-prefix = '!pb'
-# watch_channels = []
-watch_channels = [
-    "test"
-]
-swear_words = [
-    "fuck"
-]
+prefix = "!pb"
+bot_name = "plugbot"
+watch_channels = []
 
-secret_role = "cool kid"
+twitter = None
+bluesky = None
+facebook = None
+reddit = None
+instagram = None
+
+# Load config from config.json file
+def load_config():
+    with open("config.json", "r") as file:
+        global bot_name
+        global prefix
+        global watch_channels
+        global twitter
+        global bluesky
+        global facebook
+        global reddit
+        global instagram
+
+        data = json.load(file)
+
+        if data["name"] and data["name"] != "":
+            bot_name = data["name"]
+
+        if data["prefix"] and data["prefix"] != "":
+            prefix = data["prefix"]
+
+        if data["watch_channels"] and data["watch_channels"] != []:
+            watch_channels = data["watch_channels"]
+            
+        if data["twitter"]:
+            twitter = data["twitter"]
+            
+        if data["bluesky"]:
+            bluesky = data["bluesky"]
+            
+        if data["facebook"]:
+            facebook = data["facebook"]
+            
+        if data["reddit"]:
+            reddit = data["reddit"]
+            
+        if data["instagram"]:
+            instagram = data["instagram"]
 
 # Set up bot to listen for prefix commands
 bot = commands.Bot(command_prefix=prefix, intents=intents)
@@ -59,10 +97,10 @@ async def on_message(message):
         return
     
     # Example: Swear word filter
-    for word in swear_words:
-        if word in message.content.lower():
-            await message.delete()
-            await message.channel.send(f"{message.author.mention} please mind your profanity...")
+    # for word in swear_words:
+    #     if word in message.content.lower():
+    #         await message.delete()
+    #         await message.channel.send(f"{message.author.mention} please mind your profanity...")
 
     # Watch for updates that should be posted to social media
     for channel in watch_channels:
@@ -73,69 +111,6 @@ async def on_message(message):
     # handling of other messages
     await bot.process_commands(message)
 
-### ================================================================================================== ###
-### ================================================================================================== ###
-### ========================================== EXAMPLE CODE ========================================== ###
-### ================================================================================================== ###
-### ================================================================================================== ###
-
-# DM user who uses the !hello command
-@bot.command()
-async def hello(ctx):
-    await ctx.send(f"Hello, {ctx.author.mention}!")
-
-# Assign the "cool kid" role to anyone who uses the !hello command
-# NOTE: A bot cannot assign a role that is higher in the roles heirarchy in Discord settings
-@bot.command()
-async def assign(ctx):
-    role = discord.utils.get(ctx.guild.roles, name=secret_role)
-    if role:
-        await ctx.author.add_roles(role)
-        await ctx.send(f"{ctx.author.mention} is now assigned to {secret_role}")
-    else:
-        await ctx.send(f"{secret_role} doesn't exist!f")
-
-# Assign the "cool kid" role to anyone who uses the !remove command
-@bot.command()
-async def remove(ctx):
-    role = discord.utils.get(ctx.guild.roles, name=secret_role)
-
-    if role:
-        await ctx.author.remove_roles(role)
-        await ctx.send(f"{ctx.author.mention} is now removed from {secret_role}")
-    else:
-        await ctx.send(f"{secret_role} doesn't exist!f")
-
-# Send a message to any user who has the "cool kid" role and uses the !secret command  a message
-@bot.command()
-@commands.has_role(secret_role)
-async def secret(ctx):
-    await ctx.send("Welcome to the club!")
-
-# Handle any errors thrown from the secret function
-# NOTE: Errors have to be handled this way for commands that use the has_role limiter
-@secret.error
-async def secret_error(ctx, error):
-    if isinstance(error, commands.MissingRole):
-        await ctx.send("You do not have permission to do that!")
-
-# DM a user whatever the sent using the !dm {msg} command
-@bot.command()
-async def dm(ctx, *, msg):
-    await ctx.author.send(f"You said {msg}")
-
-# Reply to a user using the !reply command
-@bot.command()
-async def reply(ctx):
-    await ctx.reply("This is a reply to your message!")
-
-# Create a fake poll using a thumbs up and thumbs down emojis
-@bot.command()
-async def poll(ctx, *, question):
-    embed = discord.Embed(title="New Poll", description=question)
-    poll_message = await ctx.send(embed=embed)
-    await poll_message.add_reaction("👍")
-    await poll_message.add_reaction("👎")
-
-# Um... run the bot... duh...
+# Configure and run the bot
+load_config()
 bot.run(token=token, log_handler=handler, log_level=logging.DEBUG)

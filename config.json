@@ -1,0 +1,17 @@
+{
+    "twitter": {
+        "enabled": false
+    },
+    "bluesky": {
+        "enabled": false
+    },
+    "facebook": {
+        "enabled": false
+    },
+    "reddit": {
+        "enabled": false
+    },
+    "instagram": {
+        "enabled": false
+    }
+}

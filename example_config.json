@@ -1,0 +1,22 @@
+{
+    "name": "dadmann.bot",
+    "prefix": "!bot",
+    "watch_channels" : [
+        911317508768825397
+    ],
+    "twitter": {
+        "enabled": false
+    },
+    "bluesky": {
+        "enabled": false
+    },
+    "facebook": {
+        "enabled": false
+    },
+    "reddit": {
+        "enabled": false
+    },
+    "instagram": {
+        "enabled": false
+    }
+}
