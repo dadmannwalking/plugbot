@@ -4,14 +4,13 @@ import logging
 from dotenv import load_dotenv
 import os
 import json
-import base64
-import hashlib
-import urllib.parse
+
+import twitter
+import bluesky
 
 # Set up environment
 load_dotenv()
 token = os.getenv('DISCORD_TOKEN')
-twitter_client_id = os.getenv('TWITTER_CLIENT_ID')
 handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
 
 # Set up intents
@@ -26,44 +25,44 @@ prefix = "!pb"
 configuration_role = "admin"
 watched_channels = []
 
-twitter = None
-bluesky = None
-facebook = None
-reddit = None
-instagram = None
+twitter_config = None
+bluesky_config = None
+facebook_config = None
+reddit_config = None
+instagram_config = None
 
 # Load config from config.json file
 def load_config():
     global prefix
     global configuration_role
     global watched_channels
-    global twitter
-    global bluesky
-    global facebook
-    global reddit
-    global instagram
+    global twitter_config
+    global bluesky_config
+    global facebook_config
+    global reddit_config
+    global instagram_config
 
     with open("config.json", "r") as file:
         data = json.load(file)
         prefix = data.get("prefix", "!pb")
         configuration_role = data.get("configuration_role", "admin")
         watched_channels = data.get("watched_channels", [])
-        twitter = data.get("twitter", None)
-        bluesky = data.get("bluesky", None)
-        facebook = data.get("facebook", None)
-        reddit = data.get("reddit", None)
-        instagram = data.get("instagram", None)
+        twitter_config = data.get("twitter", None)
+        bluesky_config = data.get("bluesky", None)
+        facebook_config = data.get("facebook", None)
+        reddit_config = data.get("reddit", None)
+        instagram_config = data.get("instagram", None)
 
 def update_config():
     payload = dict()
     payload["prefix"] = prefix
     payload["configuration_role"] = configuration_role
     payload["watched_channels"] = watched_channels
-    payload["twitter"] = twitter
-    payload["bluesky"] = bluesky
-    payload["facebook"] = facebook
-    payload["reddit"] = reddit
-    payload["instagram"] = instagram
+    payload["twitter"] = twitter_config
+    payload["bluesky"] = bluesky_config
+    payload["facebook"] = facebook_config
+    payload["reddit"] = reddit_config
+    payload["instagram"] = instagram_config
     
     with open("config.json", "w") as file: 
         json.dump(payload, file, indent=4)
@@ -83,35 +82,6 @@ bot = commands.Bot(command_prefix=prefix, intents=intents)
 @bot.event
 async def on_ready():
     print(f"{bot.user.name}, reporting for duty!")
-
-# ================================================================================================ #
-# ================================================================================================ #
-# ========================================== TWITTER ============================================= #
-# ================================================================================================ #
-# ================================================================================================ #
-
-def get_twitter_auth_url():
-    random_bytes = os.urandom(32)
-    code_verifier = base64.urlsafe_b64encode(random_bytes).decode('ascii').rstrip('=')
-    hashed = hashlib.sha256(code_verifier.encode('ascii')).digest()
-    code_challenge = base64.urlsafe_b64encode(hashed).decode('ascii').rstrip('=')
-
-    base_url = "https://twitter.com/i/oauth2/authorize"
-    scope = "tweet.write"
-    params = {
-        "response_type": "code",
-        "client_id": twitter_client_id,
-        "redirect_uri": twitter.get("redirect_uri",""),
-        "scope": scope,
-        "state": "random_string",  # TODO: make this a real CSRF-safe random string
-        "code_challenge": code_challenge,
-        "code_challenge_method": "S256"
-    }
-    
-    # Why does ChatGPT suggest returning the code_verifier here??
-    # full_url = f"{base_url}?{urllib.parse.urlencode(params)}"
-    # return full_url, code_verifier
-    return f"{base_url}?{urllib.parse.urlencode(params)}"
 
 # ================================================================================================ #
 # ================================================================================================ #
@@ -160,6 +130,13 @@ async def _unsub(ctx, *, msg):
 async def _twitter(ctx):
     await ctx.reply("Twitter integration is currently disabled, sorry!")
     # await ctx.reply(f"Please visit {get_twitter_auth_url()} to authenticate the bot!")
+
+# Set up bluesky instance
+@bot.command()
+async def _blueskytest(ctx, *, msg):
+    print(1)
+    await bluesky.test(ctx, msg)
+    print(2)
 
 # ================================================================================================ #
 # ================================================================================================ #
