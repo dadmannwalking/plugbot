@@ -6,6 +6,7 @@ import os
 import json
 import base64
 import hashlib
+import urllib.parse
 
 # Set up environment
 load_dotenv()
@@ -94,7 +95,23 @@ def get_twitter_auth_url():
     code_verifier = base64.urlsafe_b64encode(random_bytes).decode('ascii').rstrip('=')
     hashed = hashlib.sha256(code_verifier.encode('ascii')).digest()
     code_challenge = base64.urlsafe_b64encode(hashed).decode('ascii').rstrip('=')
-    return f"https://twitter.com/i/oauth2/authorize?response_type=code&client_id={twitter_client_id}&redirect_uri={twitter.get("redirect_uri","")}&scope=tweet.write&state=random_string&code_challenge={code_challenge}&code_challenge_method=S256"
+
+    base_url = "https://twitter.com/i/oauth2/authorize"
+    scope = "tweet.write"
+    params = {
+        "response_type": "code",
+        "client_id": twitter_client_id,
+        "redirect_uri": twitter.get("redirect_uri",""),
+        "scope": scope,
+        "state": "random_string",  # TODO: make this a real CSRF-safe random string
+        "code_challenge": code_challenge,
+        "code_challenge_method": "S256"
+    }
+    
+    # Why does ChatGPT suggest returning the code_verifier here??
+    # full_url = f"{base_url}?{urllib.parse.urlencode(params)}"
+    # return full_url, code_verifier
+    return f"{base_url}?{urllib.parse.urlencode(params)}"
 
 # ================================================================================================ #
 # ================================================================================================ #
@@ -141,8 +158,8 @@ async def _unsub(ctx, *, msg):
 # Set up twitter instance
 @bot.command()
 async def _twitter(ctx):
-    print(1)
-    await ctx.reply(f"Please visit {get_twitter_auth_url()} to authenticate the bot!")
+    await ctx.reply("Twitter integration is currently disabled, sorry!")
+    # await ctx.reply(f"Please visit {get_twitter_auth_url()} to authenticate the bot!")
 
 # ================================================================================================ #
 # ================================================================================================ #

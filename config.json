@@ -4,10 +4,7 @@
     "watched_channels": [
         920319014503329832
     ],
-    "twitter": {
-        "enabled": true,
-        "redirect_uri": ""
-    },
+    "twitter": null,
     "bluesky": null,
     "facebook": null,
     "reddit": null,
