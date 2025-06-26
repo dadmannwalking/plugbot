@@ -4,9 +4,14 @@ import logging
 from dotenv import load_dotenv
 import os
 import json
+import asyncio
 
+# Social media handler imports
 import twitter
 import bluesky
+
+# Helper imports
+import message as msghelper
 
 # Set up environment
 load_dotenv()
@@ -24,6 +29,8 @@ intents.members = True
 prefix = "!pb"
 configuration_role = "admin"
 watched_channels = []
+permitted_users = []
+keywords = []
 
 twitter_config = None
 bluesky_config = None
@@ -36,6 +43,8 @@ def load_config():
     global prefix
     global configuration_role
     global watched_channels
+    global permitted_users
+    global keywords
     global twitter_config
     global bluesky_config
     global facebook_config
@@ -47,6 +56,8 @@ def load_config():
         prefix = data.get("prefix", "!pb")
         configuration_role = data.get("configuration_role", "admin")
         watched_channels = data.get("watched_channels", [])
+        permitted_users = data.get("permitted_users", [])
+        keywords = data.get("keywords", [])
         twitter_config = data.get("twitter", None)
         bluesky_config = data.get("bluesky", None)
         facebook_config = data.get("facebook", None)
@@ -58,6 +69,8 @@ def update_config():
     payload["prefix"] = prefix
     payload["configuration_role"] = configuration_role
     payload["watched_channels"] = watched_channels
+    payload["permitted_users"] = permitted_users
+    payload["keywords"] = keywords
     payload["twitter"] = twitter_config
     payload["bluesky"] = bluesky_config
     payload["facebook"] = facebook_config
@@ -74,14 +87,31 @@ def authorized(user):
     for role in user.roles:
         if role.name == configuration_role:
             return True
+    print("user is not authorized!")
     return False
+
+def handle(message):
+    title = None
+    description = None
+    url = None
+    thumbnail = None
+    test = None
+
+    if message.author.name == "Sapphire":
+        embed = message.embeds[0]
+        title = embed.author.name
+        description = embed.title
+        url = embed.url
+        thumbnail = embed.image.url
+        test = f"{title} {description}"
+    else:
+        print(f"TODO: Need to handle messages from {message.author.name}")
+        print(msghelper.json_from(message=message))
+
+    return title, description, url, thumbnail, test
 
 # Set up bot to listen for prefix commands
 bot = commands.Bot(command_prefix=prefix, intents=intents)
-
-@bot.event
-async def on_ready():
-    print(f"{bot.user.name}, reporting for duty!")
 
 # ================================================================================================ #
 # ================================================================================================ #
@@ -111,7 +141,6 @@ async def _sub(ctx, *, msg):
 @bot.command()
 async def _unsub(ctx, *, msg):
     if authorized(ctx.author) == False:
-        print("user is not authorized")
         return
 
     try:
@@ -125,39 +154,68 @@ async def _unsub(ctx, *, msg):
     except ValueError:
         await ctx.reply(f"{msg} is not a valid channel id")
 
+# Get and print message history
+@bot.command()
+async def _gethistory(ctx):
+    if authorized(ctx.author) == False:
+        return
+    
+    async for message in ctx.channel.history(limit=10):
+        print("========================================================================")
+        print(msghelper.json_from(message))
+
 # Set up twitter instance
 @bot.command()
 async def _twitter(ctx):
+    if authorized(ctx.author) == False:
+        return
+    
     await ctx.reply("Twitter integration is currently disabled, sorry!")
     # await ctx.reply(f"Please visit {get_twitter_auth_url()} to authenticate the bot!")
 
-# Set up bluesky instance
+# Test bluesky instance
 @bot.command()
 async def _blueskytest(ctx, *, msg):
-    print(1)
+    if authorized(ctx.author) == False:
+        return
+    
     await bluesky.test(ctx, msg)
-    print(2)
 
 # ================================================================================================ #
 # ================================================================================================ #
-# ========================================== SWIZZLES ============================================ #
+# =========================================== EVENTS ============================================= #
 # ================================================================================================ #
 # ================================================================================================ #
+
+@bot.event
+async def on_ready():
+    print(f"{bot.user.name}, reporting for duty!")
 
 # Monitor messages sent in channels
 @bot.event
 async def on_message(message):
     if message.author == bot.user:
-        return
-
-    # Watch for updates that should be posted to social media
-    for channel in watched_channels:
-        try:
-            channel_id = int(channel)
-            if message.channel.id == channel_id:
-                print(f"should send {message} to social media")
-        except ValueError:
-            print("")
+        print("don't monitor bot messages")
+        return await bot.process_commands(message)
+    
+    if permitted_users != [] and message.author.name not in permitted_users:
+        print("only monitor message from permitted users")
+        return await bot.process_commands(message)
+    
+    if message.channel.id not in watched_channels:
+        print("only monitor messages from subbed channels")
+        return await bot.process_commands(message)
+    
+    if bluesky_config.get("enabled", False):
+        title, description, url, thumbnail, test = handle(message)
+        if keywords == []:
+            print("posting to Bluesky...")
+            await bluesky.create_post(title, description, url, thumbnail)
+            return await bot.process_commands(message)
+        for keyword in keywords:
+            if keyword in test:
+                bluesky.create_post(title, description, url, thumbnail)
+                return await bot.process_commands(message)
 
     # NOTE: always required, this function is effectively an override allows continued
     # handling of other messages

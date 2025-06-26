@@ -2,10 +2,19 @@
     "prefix": "!pb",
     "configuration_role": "mod",
     "watched_channels": [
-        920319014503329832
+        920319014503329832,
+        1285336719310192752,
+        1331387319189639220
     ],
+    "permitted_users": [
+        "Sapphire",
+        "NotifyMe"
+    ],
+    "keywords": [],
     "twitter": null,
-    "bluesky": null,
+    "bluesky": {
+        "enabled": true
+    },
     "facebook": null,
     "reddit": null,
     "instagram": null
