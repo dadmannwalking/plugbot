@@ -1,7 +1,6 @@
 from dotenv import load_dotenv
 import os
 from atproto import AsyncClient, models
-# !pb_blueskytest testfrom atproto.xrpc_client.models import AppBskyEmbedExternal
 import asyncio
 import httpx
 

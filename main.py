@@ -90,26 +90,6 @@ def authorized(user):
     print("user is not authorized!")
     return False
 
-def handle(message):
-    title = None
-    description = None
-    url = None
-    thumbnail = None
-    test = None
-
-    if message.author.name == "Sapphire":
-        embed = message.embeds[0]
-        title = embed.author.name
-        description = embed.title
-        url = embed.url
-        thumbnail = embed.image.url
-        test = f"{title} {description}"
-    else:
-        print(f"TODO: Need to handle messages from {message.author.name}")
-        print(msghelper.json_from(message=message))
-
-    return title, description, url, thumbnail, test
-
 # Set up bot to listen for prefix commands
 bot = commands.Bot(command_prefix=prefix, intents=intents)
 
@@ -161,8 +141,17 @@ async def _gethistory(ctx):
         return
     
     async for message in ctx.channel.history(limit=10):
+        if message.author == bot.user:
+            continue
+        
+        if permitted_users != [] and message.author.name not in permitted_users:
+            continue
+        
+        if message.channel.id not in watched_channels:
+            continue
+
         print("========================================================================")
-        print(msghelper.json_from(message))
+        print(msghelper.handle(message))
 
 # Set up twitter instance
 @bot.command()
@@ -207,13 +196,14 @@ async def on_message(message):
         return await bot.process_commands(message)
     
     if bluesky_config.get("enabled", False):
-        title, description, url, thumbnail, test = handle(message)
+        title, description, url, thumbnail, test = msghelper.handle(message)
         if keywords == []:
-            print("posting to Bluesky...")
+            print("posting to Bluesky because keywords are empty...")
             await bluesky.create_post(title, description, url, thumbnail)
             return await bot.process_commands(message)
         for keyword in keywords:
             if keyword in test:
+                print("posting to Bluesky because keyword is present...")
                 bluesky.create_post(title, description, url, thumbnail)
                 return await bot.process_commands(message)
 
