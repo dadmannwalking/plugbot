@@ -28,7 +28,9 @@ Bluesky requires the following properties to be configured:
 
 ```json
 {
-    "enabled": false
+    "enabled": false,
+    "username": "<bot-username>",
+    "password": "<base64-password>"
 }
 ```
 

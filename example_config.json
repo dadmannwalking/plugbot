@@ -1,7 +1,6 @@
 {
     "911317508269670421" : {
         "_comment" : "kurai.itaki's testing server",
-        "prefix": "!pb",
         "configuration_role": "mod",
         "watched_channels": [
             911317508768825397
@@ -23,7 +22,6 @@
     },
     "1283050277833936906" : {
         "_comment" : "StoneVania Community",
-        "prefix": "!pb",
         "configuration_role": "Admin",
         "watched_channels": [
             1283052279993204816,

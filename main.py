@@ -33,7 +33,6 @@ intents.members = True
 intents.message_content = True
 
 # Local variables
-prefix = "!pb"
 configuration_role = "admin"
 watched_channels = []
 permitted_users = []
@@ -47,7 +46,6 @@ instagram_config = None
 
 # Load config from config.json file
 def load_config():
-    global prefix
     global configuration_role
     global watched_channels
     global permitted_users
@@ -60,7 +58,6 @@ def load_config():
 
     with open("config.json", "r") as file:
         data = json.load(file)
-        prefix = data.get("prefix", "!pb")
         configuration_role = data.get("configuration_role", "admin")
         watched_channels = data.get("watched_channels", [])
         permitted_users = data.get("permitted_users", [])
@@ -77,7 +74,6 @@ def load_config():
 # Update config stored in config.json file
 def update_config():
     payload = dict()
-    payload["prefix"] = prefix
     payload["configuration_role"] = configuration_role
     payload["watched_channels"] = watched_channels
     payload["permitted_users"] = permitted_users
@@ -102,7 +98,7 @@ def authorized(user):
     return False
 
 # Configure bot to watch for prefix commands with given intents
-bot = commands.Bot(command_prefix=prefix, intents=intents)
+bot = commands.Bot(command_prefix="!pb", intents=intents)
 
 # ================================================================================================ #
 # ================================================================================================ #
