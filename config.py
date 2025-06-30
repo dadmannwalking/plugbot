@@ -4,6 +4,9 @@ from discord import Message
 import json
 import base64
 
+def taglog(msg: str):
+    print(f"[CONFIG] {msg}", flush=True)
+
 class ServiceConfig:
     def __init__(
         self, 
@@ -13,12 +16,13 @@ class ServiceConfig:
         self.enabled = enabled
         self.username = username
 
-        if password:
+        if password and password.strip():
             try:
                 decoded_bytes = base64.b64decode(password.encode("utf-8"))
                 self.password = decoded_bytes.decode("utf-8")
-            except Exception:
+            except Exception as e:
                 # Assume already plain text if decoding fails
+                taglog(f"Password decode failed, using raw password: {e}")
                 self.password = password
         else:
             self.password = None
@@ -37,6 +41,14 @@ class ServiceConfig:
             obj["password"] = encoded
 
         return obj
+
+    def enable(self, username, password):
+        self.enabled = True
+        self.password = password
+        self.username = (
+            username if username.endswith(".bsky.social")
+            else f"{username}.bsky.social"
+        )
 
 class Config:
     def __init__(
@@ -61,11 +73,13 @@ class Config:
         self.instagram = instagram
 
     def json(self) -> dict:
-        obj = {}
-        obj["configuration_role"] = self.configuration_role
-        obj["watched_channels"] = self.watched_channels
-        obj["permitted_users"] = self.permitted_users
-        obj["keywords"] = self.keywords
+        obj = {
+            "configuration_role": self.configuration_role,
+            "watched_channels": self.watched_channels,
+            "permitted_users": self.permitted_users,
+            "keywords": self.keywords
+        }
+        
         obj["twitter"] = self.twitter.json() if self.twitter else None
         obj["bluesky"] = self.bluesky.json() if self.bluesky else None
         obj["facebook"] = self.facebook.json() if self.facebook else None
@@ -86,12 +100,15 @@ class Config:
 
     def confirm(self, message: Message) -> bool:
         if message.author.name == "plugbot":
+            taglog("ignore messages from plugbot")
             return False
 
         if self.permitted_users != [] and message.author.name not in self.permitted_users:
+            taglog(f"ignore messages from non-permitted user {message.author.name}")
             return False
 
         if message.channel.id not in self.watched_channels:
+            taglog(f"ignore messages from unmonitored channel {message.channel.name}")
             return False
 
         return True
@@ -103,11 +120,11 @@ def get_config(guild_id: int) -> Config:
     with open(file_path, "r") as file:
         data = json.load(file)
         config_json = data.get(str(guild_id), {})
-        twitter_config = config_json.get("twitter", {})
-        bluesky_config = config_json.get("bluesky", {})
-        facebook_config = config_json.get("facebook", {})
-        reddit_config = config_json.get("reddit", {})
-        instagram_config = config_json.get("instagram", {})
+        twitter_config = config_json.get("twitter") or {}
+        bluesky_config = config_json.get("bluesky") or {}
+        facebook_config = config_json.get("facebook") or {}
+        reddit_config = config_json.get("reddit") or {}
+        instagram_config = config_json.get("instagram") or {}
 
         return Config(
             configuration_role=config_json.get("configuration_role", "admin"),
