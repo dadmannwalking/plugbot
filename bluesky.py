@@ -4,15 +4,19 @@ from atproto import AsyncClient, models
 import asyncio
 import httpx
 
-bluesky_username = os.getenv('BLUESKY_USERNAME')
-bluesky_password = os.getenv('BLUESKY_PASSWORD')
+username = None
+password = None
 
 client = AsyncClient()
 
+def taglog(msg):
+    print(f"[BLUESKY] {msg}")
+
 async def login(ctx):
-    username = f"{bluesky_username}.bsky.social"
+    corrected_username = f"{username}.bsky.social"
     try:
-        await asyncio.wait_for(client.login(username, bluesky_password), 5)
+        taglog(f"logging into bluesky [{corrected_username}]...")
+        await asyncio.wait_for(client.login(corrected_username, password), 5)
         return True
     except asyncio.TimeoutError:
         await client.session.close()
@@ -43,20 +47,26 @@ async def create_post(title, description, url, thumbnail, ctx):
             ),
             features=[models.AppBskyRichtextFacet.Link(uri=url)]
         )
+        taglog(f"created facet [{facet}]")
 
         # Download the thumbmnail from the url and upload to atproto blob
-        response = httpx.get(thumbnail)
+        async with httpx.AsyncClient() as client_http:
+            response = await client_http.get(thumbnail)
+            taglog(f"received image with response [{response}]")
+            
         blob = await client.com.atproto.repo.upload_blob(response.content)
-
+        taglog(f"got blob [{blob.blob}]")
+        
         # Create embed to include in message
+        taglog(f"creating embed with {url}, {title}, and {description}")
         external_embed = models.AppBskyEmbedExternal.Main(
             external=models.AppBskyEmbedExternal.External(
                 uri=url,
                 title=title,
-                description=description,
+                description=description or "",
                 thumb=blob.blob
             )
         )
-
+        taglog(f"created external embed [{external_embed}]")
+        
         await client.send_post(text=plaintext, facets=[facet], embed=external_embed)
-        # await client.send_post(text=message)

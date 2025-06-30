@@ -16,14 +16,21 @@ import message as msghelper
 # Set up environment
 load_dotenv()
 token = os.getenv('DISCORD_TOKEN')
+
+# These should eventually come from the config.json once the project has been updated
+# to support multiple servers.
+bluesky_username = os.getenv('BLUESKY_USERNAME')
+bluesky_password = os.getenv('BLUESKY_PASSWORD')
+
 handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
 
 # Set up intents
 # NOTE: May need to activate more and/or disable some as the project needs; see 
 # https://discordpy.readthedocs.io/en/stable/intents.html for more information!
 intents = discord.Intents.default()
-intents.message_content = True
+intents.guilds = True
 intents.members = True
+intents.message_content = True
 
 # Local variables
 prefix = "!pb"
@@ -64,6 +71,10 @@ def load_config():
         reddit_config = data.get("reddit", None)
         instagram_config = data.get("instagram", None)
 
+    bluesky.username = bluesky_username
+    bluesky.password = bluesky_password
+
+# Update config stored in config.json file
 def update_config():
     payload = dict()
     payload["prefix"] = prefix
@@ -90,7 +101,7 @@ def authorized(user):
     print("user is not authorized!")
     return False
 
-# Set up bot to listen for prefix commands
+# Configure bot to watch for prefix commands with given intents
 bot = commands.Bot(command_prefix=prefix, intents=intents)
 
 # ================================================================================================ #
@@ -151,7 +162,12 @@ async def _gethistory(ctx):
             continue
 
         print("========================================================================")
-        print(msghelper.handle(message))
+        print(msghelper.json_from(message))
+        
+        title, desc, url, thumb, test = msghelper.handle(message=message)
+        await bluesky.create_post(title, desc, url, thumb, ctx)
+        print("created post!")
+        return
 
 # Set up twitter instance
 @bot.command()
@@ -162,13 +178,26 @@ async def _twitter(ctx):
     await ctx.reply("Twitter integration is currently disabled, sorry!")
     # await ctx.reply(f"Please visit {get_twitter_auth_url()} to authenticate the bot!")
 
+# Test Twtitter instance
+@bot.command()
+async def _testtwitter(ctx, *, msg):
+    if authorized(ctx.author) == False:
+        return
+    
+    await ctx.reply('Twitter not yet integrated...')
+
 # Test bluesky instance
 @bot.command()
-async def _blueskytest(ctx, *, msg):
+async def _testbluesky(ctx, *, msg):
     if authorized(ctx.author) == False:
         return
     
     await bluesky.test(ctx, msg)
+
+# Enable and configure Bluesky
+@bot.command()
+async def _enablebluesky(ctx, *, msg):
+    print("TODO: enable and store username and password")
 
 # ================================================================================================ #
 # ================================================================================================ #
@@ -180,6 +209,10 @@ async def _blueskytest(ctx, *, msg):
 async def on_ready():
     print(f"{bot.user.name}, reporting for duty!")
 
+@bot.event
+async def on_guild_join(guild):
+    print(f"{guild.name} has added plugbot [{guild.id}]")
+
 # Monitor messages sent in channels
 @bot.event
 async def on_message(message):
@@ -188,7 +221,7 @@ async def on_message(message):
         return await bot.process_commands(message)
     
     if permitted_users != [] and message.author.name not in permitted_users:
-        print("only monitor message from permitted users")
+        print(f"only monitor message from permitted users not [{message.author.name}]")
         return await bot.process_commands(message)
     
     if message.channel.id not in watched_channels:
@@ -199,12 +232,12 @@ async def on_message(message):
         title, description, url, thumbnail, test = msghelper.handle(message)
         if keywords == []:
             print("posting to Bluesky because keywords are empty...")
-            await bluesky.create_post(title, description, url, thumbnail)
+            await bluesky.create_post(title, description, url, thumbnail, ctx)
             return await bot.process_commands(message)
         for keyword in keywords:
             if keyword in test:
                 print("posting to Bluesky because keyword is present...")
-                bluesky.create_post(title, description, url, thumbnail)
+                await bluesky.create_post(title, description, url, thumbnail, ctx)
                 return await bot.process_commands(message)
 
     # NOTE: always required, this function is effectively an override allows continued
