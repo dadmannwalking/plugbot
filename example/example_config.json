@@ -1,22 +1,47 @@
 {
-    "prefix": "!bot",
-    "configuration_role": "mod",
-    "watch_channels" : [
-        911317508768825397
-    ],
-    "twitter": {
-        "enabled": false
+    "911317508269670421" : {
+        "_comment" : "kurai.itaki's testing server",
+        "configuration_role": "mod",
+        "watched_channels": [
+            911317508768825397
+        ],
+        "permitted_users": [
+            "Sapphire",
+            "NotifyMe"
+        ],
+        "keywords": [],
+        "twitter": null,
+        "bluesky": {
+            "enabled": true,
+            "username": "<username>",
+            "password": "<base64-password>"
+        },
+        "facebook": null,
+        "reddit": null,
+        "instagram": null
     },
-    "bluesky": {
-        "enabled": false
-    },
-    "facebook": {
-        "enabled": false
-    },
-    "reddit": {
-        "enabled": false
-    },
-    "instagram": {
-        "enabled": false
+    "1283050277833936906" : {
+        "_comment" : "StoneVania Community",
+        "configuration_role": "Admin",
+        "watched_channels": [
+            1283052279993204816,
+            1283052903031898132
+        ],
+        "permitted_users": [
+            "NotifyMe"
+        ],
+        "keywords": [
+            "stonevania",
+            "vanian"
+        ],
+        "twitter": null,
+        "bluesky": {
+            "enabled": true,
+            "username": "<username>",
+            "password": "<base64-password>"
+        },
+        "facebook": null,
+        "reddit": null,
+        "instagram": null
     }
 }

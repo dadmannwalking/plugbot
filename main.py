@@ -15,6 +15,9 @@ import bluesky
 # Helper imports
 import message as msghelper
 
+def taglog(msg):
+    print(f"[MAIN] {msg}")
+
 # Set up environment
 load_dotenv()
 token = os.getenv('DISCORD_TOKEN')
@@ -29,7 +32,7 @@ intents.members = True
 intents.message_content = True
 
 # Configure bot to watch for prefix commands with given intents
-bot = commands.Bot(command_prefix="!pb", intents=intents)
+bot = commands.Bot(command_prefix='!pb_', intents=intents)
 
 # ================================================================================================ #
 # ================================================================================================ #
@@ -37,9 +40,13 @@ bot = commands.Bot(command_prefix="!pb", intents=intents)
 # ================================================================================================ #
 # ================================================================================================ #
 
+@bot.command()
+async def test(ctx):
+    await ctx.reply("hello there")
+
 # Register channel for message monitoring
 @bot.command()
-async def _sub(ctx, *, msg):
+async def sub(ctx, *, msg):
     config = get_config(ctx.guild.id)
     watched_channels = config.watched_channels
 
@@ -60,7 +67,7 @@ async def _sub(ctx, *, msg):
 
 # Remove channel from message monitoring
 @bot.command()
-async def _unsub(ctx, *, msg):
+async def unsub(ctx, *, msg):
     config = get_config(ctx.guild.id)
     watched_channels = config.watched_channels
 
@@ -81,7 +88,7 @@ async def _unsub(ctx, *, msg):
 
 # Get and print message history
 @bot.command()
-async def _gethistory(ctx):
+async def gethistory(ctx):
     config = get_config(ctx.guild.id)
 
     if config.authorized(ctx.author) == False:
@@ -101,7 +108,7 @@ async def _gethistory(ctx):
 
 # Set up twitter instance
 @bot.command()
-async def _twitter(ctx):
+async def twitter(ctx):
     config = get_config(ctx.guild.id)
 
     if config.authorized(ctx.author) == False:
@@ -112,7 +119,7 @@ async def _twitter(ctx):
 
 # Test Twtitter instance
 @bot.command()
-async def _testtwitter(ctx, *, msg):
+async def testtwitter(ctx, *, msg):
     config = get_config(ctx.guild.id)
 
     if config.authorized(ctx.author) == False:
@@ -122,7 +129,7 @@ async def _testtwitter(ctx, *, msg):
 
 # Test bluesky instance
 @bot.command()
-async def _testbluesky(ctx, *, msg):
+async def testbluesky(ctx, *, msg):
     config = get_config(ctx.guild.id)
 
     if config.authorized(ctx.author) == False:
@@ -132,8 +139,29 @@ async def _testbluesky(ctx, *, msg):
 
 # Enable and configure Bluesky
 @bot.command()
-async def _enablebluesky(ctx, *, msg):
-    print("TODO: enable and store username and password")
+async def enablebluesky(ctx, *, msg):
+    # The user should call this with two parameters, divided by a space
+    # The first parameter is the bot's username and the second is the password
+    config = get_config(ctx.guild.id)
+    if config.authorized(ctx.author) == False:
+        return
+    
+    components = msg.split()
+    if len(components) != 2:
+        await ctx.reply("This command requires username and password as parameters")
+        await ctx.message.delete()
+        return
+
+    if config.bluesky is None:
+        config.bluesky = ServiceConfig(enable=False)
+    
+    username = components[0]
+    password = components[1]
+    config.bluesky.enable(username, password)
+    set_config(config, ctx.guild.id)
+
+    await ctx.reply("Bluesky integration enabled successfully.")
+    await ctx.message.delete()
 
 # ================================================================================================ #
 # ================================================================================================ #
@@ -155,19 +183,17 @@ async def on_message(message):
     config = get_config(message.guild.id)
 
     if config.confirm(message) == False:
-        return await bot.protected(message)
+        await bot.process_commands(message)
+        return
     
     if config.bluesky.enabled:
         title, description, url, thumbnail, test = msghelper.handle(message)
         if keywords == []:
             print("posting to Bluesky because keywords are empty...")
             await bluesky.create_post(title, description, url, thumbnail, ctx, config.bluesky)
-            return await bot.process_commands(message)
-        for keyword in keywords:
-            if keyword in test:
-                print("posting to Bluesky because keyword is present...")
-                await bluesky.create_post(title, description, url, thumbnail, ctx, config.bluesky)
-                return await bot.process_commands(message)
+        elif any(keyword in test for keyword in config.keywords):
+            print("posting to Bluesky because keyword is present...")
+            await bluesky.create_post(title, description, url, thumbnail, ctx, config.bluesky)
 
     # NOTE: always required, this function is effectively an override allows continued
     # handling of other messages
@@ -180,5 +206,4 @@ async def on_message(message):
 # ================================================================================================ #
 
 # Configure and run the bot
-load_config()
 bot.run(token=token, log_handler=handler, log_level=logging.DEBUG)
