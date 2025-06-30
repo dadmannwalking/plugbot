@@ -1,6 +1,8 @@
 from pathlib import Path
 from typing import List, Optional
+from discord import Message
 import json
+import base64
 
 class ServiceConfig:
     def __init__(
@@ -10,17 +12,29 @@ class ServiceConfig:
         password: Optional[str] = None):
         self.enabled = enabled
         self.username = username
-        self.password = password
+
+        if password:
+            try:
+                decoded_bytes = base64.b64decode(password.encode("utf-8"))
+                self.password = decoded_bytes.decode("utf-8")
+            except Exception:
+                # Assume already plain text if decoding fails
+                self.password = password
+        else:
+            self.password = None
 
     def json(self) -> dict:
         obj = {}
         obj["enabled"] = self.enabled
 
-        if username:
+        if self.username:
             obj["username"] = self.username
 
-        if password:
-            obj["password"] = self.password
+        if self.password:
+            # Ensure encoded password when we make json dict so it's always stored as
+            # encoded string
+            encoded = base64.b64encode(self.password.encode("utf-8")).decode("utf-8")
+            obj["password"] = encoded
 
         return obj
 
@@ -58,6 +72,29 @@ class Config:
         obj["reddit"] = self.reddit.json() if self.reddit else None
         obj["instagram"] = self.instagram.json() if self.instagram else None
         return obj
+
+    # For some reason, commands.has_role() does not like the role being configured via json,
+    # so this function will determine if a given user has authorization to use a protected
+    # function
+    def authorized(self, user) -> bool:
+        for role in user.roles:
+            if role.name == self.configuration_role:
+                return True
+
+        print(f"{user.name} is not authorized!")
+        return False
+
+    def confirm(self, message: Message) -> bool:
+        if message.author.name == "plugbot":
+            return False
+
+        if self.permitted_users != [] and message.author.name not in self.permitted_users:
+            return False
+
+        if message.channel.id not in self.watched_channels:
+            return False
+
+        return True
 
 script_dir = Path(__file__).parent
 file_path = script_dir / "config.json"

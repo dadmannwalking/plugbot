@@ -28,18 +28,6 @@ intents.guilds = True
 intents.members = True
 intents.message_content = True
 
-# For some reason, commands.has_role() does not like the role being configured via json,
-# so this function will determine if a given user has authorization to use a protected
-# function
-def authorized(user, guild_id: int) -> bool:
-    config = get_config(guild_id=guild_id)
-    for role in user.roles:
-        if role.name == config.configuration_role:
-            return True
-
-    print("user is not authorized!")
-    return False
-
 # Configure bot to watch for prefix commands with given intents
 bot = commands.Bot(command_prefix="!pb", intents=intents)
 
@@ -52,11 +40,11 @@ bot = commands.Bot(command_prefix="!pb", intents=intents)
 # Register channel for message monitoring
 @bot.command()
 async def _sub(ctx, *, msg):
-    if authorized(ctx.author, ctx.guild.id) == False:
-        return
-    
     config = get_config(ctx.guild.id)
     watched_channels = config.watched_channels
+
+    if config.authorized(ctx.author) == False:
+        return
 
     try:
         channel_id = int(msg.strip())
@@ -73,11 +61,11 @@ async def _sub(ctx, *, msg):
 # Remove channel from message monitoring
 @bot.command()
 async def _unsub(ctx, *, msg):
-    if authorized(ctx.author, ctx.guild.id) == False:
-        return
-    
     config = get_config(ctx.guild.id)
     watched_channels = config.watched_channels
+
+    if config.authorized(ctx.author) == False:
+        return
 
     try:
         channel_id = int(msg.strip())
@@ -94,31 +82,29 @@ async def _unsub(ctx, *, msg):
 # Get and print message history
 @bot.command()
 async def _gethistory(ctx):
-    if authorized(ctx.author, ctx.guild.id) == False:
+    config = get_config(ctx.guild.id)
+
+    if config.authorized(ctx.author) == False:
         return
     
     async for message in ctx.channel.history(limit=10):
-        if message.author == bot.user:
+        if config.confirm(message) == False:
             continue
-        
-        if permitted_users != [] and message.author.name not in permitted_users:
-            continue
-        
-        if message.channel.id not in watched_channels:
-            continue
-
+            
         print("========================================================================")
         print(msghelper.json_from(message))
         
-        title, desc, url, thumb, test = msghelper.handle(message=message)
-        await bluesky.create_post(title, desc, url, thumb, ctx)
-        print("created post!")
-        return
+        # title, desc, url, thumb, test = msghelper.handle(message=message)
+        # await bluesky.create_post(title, desc, url, thumb, ctx, config)
+        # print("created post!")
+        # return # Only do the first one to prevent spamming
 
 # Set up twitter instance
 @bot.command()
 async def _twitter(ctx):
-    if authorized(ctx.author, ctx.guild.id) == False:
+    config = get_config(ctx.guild.id)
+
+    if config.authorized(ctx.author) == False:
         return
     
     await ctx.reply("Twitter integration is currently disabled, sorry!")
@@ -127,7 +113,9 @@ async def _twitter(ctx):
 # Test Twtitter instance
 @bot.command()
 async def _testtwitter(ctx, *, msg):
-    if authorized(ctx.author, ctx.guild.id) == False:
+    config = get_config(ctx.guild.id)
+
+    if config.authorized(ctx.author) == False:
         return
     
     await ctx.reply('Twitter not yet integrated...')
@@ -135,10 +123,12 @@ async def _testtwitter(ctx, *, msg):
 # Test bluesky instance
 @bot.command()
 async def _testbluesky(ctx, *, msg):
-    if authorized(ctx.author, ctx.guild.id) == False:
+    config = get_config(ctx.guild.id)
+
+    if config.authorized(ctx.author) == False:
         return
     
-    await bluesky.test(ctx, msg)
+    await bluesky.test(ctx, msg, config.bluesky)
 
 # Enable and configure Bluesky
 @bot.command()
@@ -162,28 +152,21 @@ async def on_guild_join(guild):
 # Monitor messages sent in channels
 @bot.event
 async def on_message(message):
-    if message.author == bot.user:
-        print("don't monitor bot messages")
-        return await bot.process_commands(message)
+    config = get_config(message.guild.id)
+
+    if config.confirm(message) == False:
+        return await bot.protected(message)
     
-    if permitted_users != [] and message.author.name not in permitted_users:
-        print(f"only monitor message from permitted users not [{message.author.name}]")
-        return await bot.process_commands(message)
-    
-    if message.channel.id not in watched_channels:
-        print("only monitor messages from subbed channels")
-        return await bot.process_commands(message)
-    
-    if bluesky_config.get("enabled", False):
+    if config.bluesky.enabled:
         title, description, url, thumbnail, test = msghelper.handle(message)
         if keywords == []:
             print("posting to Bluesky because keywords are empty...")
-            await bluesky.create_post(title, description, url, thumbnail, ctx)
+            await bluesky.create_post(title, description, url, thumbnail, ctx, config.bluesky)
             return await bot.process_commands(message)
         for keyword in keywords:
             if keyword in test:
                 print("posting to Bluesky because keyword is present...")
-                await bluesky.create_post(title, description, url, thumbnail, ctx)
+                await bluesky.create_post(title, description, url, thumbnail, ctx, config.bluesky)
                 return await bot.process_commands(message)
 
     # NOTE: always required, this function is effectively an override allows continued
