@@ -101,7 +101,7 @@ class Config:
         print(f"{user.name} is not authorized!")
         return False
 
-    def confirm(self, message: Message) -> bool:
+    def confirm(self, message: Message, test_string: str, ignore_channels=False) -> bool:
         if message.author.name == "plugbot":
             taglog("ignore messages from plugbot")
             return False
@@ -110,8 +110,12 @@ class Config:
             taglog(f"ignore messages from non-permitted user {message.author.name}")
             return False
 
-        if message.channel.id not in self.watched_channels:
+        if not ignore_channels and message.channel.id not in self.watched_channels:
             taglog(f"ignore messages from unmonitored channel {message.channel.name}")
+            return False
+
+        if self.keywords != [] and any(keyword not in test_string for keyword in self.keywords):
+            taglog("ignore message without key phrases")
             return False
 
         return True

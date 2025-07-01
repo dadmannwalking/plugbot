@@ -211,23 +211,46 @@ async def users(ctx, *, msg):
 
 # Get and print message history
 @bot.command()
-async def gethistory(ctx):
+async def gethistory(ctx, *, msg):
+    def escape_md(text):
+        if not text:
+            return ""
+        return text.replace('`', '\\`')
+
     config = get_config(ctx.guild.id)
 
     if config.authorized(ctx.author, ctx.guild) == False:
         return
-    
-    async for message in ctx.channel.history(limit=10):
-        if config.confirm(message) == False:
-            continue
+
+    try:
+        limit = int(msg.strip())
+        valid_messages_found = False
+        async for message in ctx.channel.history(limit=limit):
+            title, desc, url, thumb = msghelper.handle(message)
+            message_json = msghelper.json_from(message)
             
-        print("========================================================================")
-        print(msghelper.json_from(message))
+            if config.confirm(message, message_json, True) == False:
+                taglog(f"skipping message with json: {message_json}")
+                continue
+
+            valid_messages_found = True
+            await ctx.reply(
+                f"```"
+                f"Valid message found with JSON:\n{escape_md(message_json)}\n\n"
+                f"Would send message to socials with the following data:\n"
+                f"title: {escape_md(title)}\n"
+                f"description: {escape_md(desc)}\n"
+                f"url: {escape_md(url)}\n"
+                f"thumbnail: {escape_md(thumb)}"
+                f"```"
+            )
         
-        # title, desc, url, thumb, test = msghelper.handle(message=message)
-        # await bluesky.create_post(title, desc, url, thumb, ctx, config)
-        # print("created post!")
-        # return # Only do the first one to prevent spamming
+        if not valid_messages_found:
+            await ctx.reply("No valid messages were found in this channel.")
+        else:
+            await ctx.reply("And that's all I found.")
+    except ValueError as e:
+        return await ctx.reply(f"{msg} is not a valid number!")
 
 # Set up twitter instance
 @bot.command()
@@ -317,19 +340,15 @@ async def on_member_remove(member):
 async def on_message(message):
     config = get_config(message.guild.id)
 
-    if config.confirm(message) == False:
+    if config.confirm(message, msghelper.json_from(message)) == False:
         taglog(f'user not authorized, process {message.content}')
         await bot.process_commands(message)
         return
     
     if config.bluesky.enabled:
-        title, description, url, thumbnail, test = msghelper.handle(message)
-        if keywords == []:
-            print("posting to Bluesky because keywords are empty...")
-            await bluesky.create_post(title, description, url, thumbnail, ctx, config.bluesky)
-        elif any(keyword in test for keyword in config.keywords):
-            print("posting to Bluesky because keyword is present...")
-            await bluesky.create_post(title, description, url, thumbnail, ctx, config.bluesky)
+        print("posting to Bluesky...")
+        title, description, url, thumbnail = msghelper.handle(message)
+        await bluesky.create_post(title, description, url, thumbnail, ctx, config.bluesky)
 
     # NOTE: always required, this function is effectively an override allows continued
     # handling of other messages

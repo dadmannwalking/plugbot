@@ -34,7 +34,7 @@ plugbot is designed with security in mind. To use plugbot's commands, a user in 
 
 `!pb_users remove <username/user id>` removes a user with the given username or user id from the list of currently monitored users, if present. **Please note** that username matching is case-insensitive and can use either username or display name, but the user must be a member of your guild.
 
-`!pb_gethistory` replies to the original message with JSON representations of any valid repostable messages of the last 10 messages in the channel it was called in.
+`!pb_gethistory <limit>` iterates through the last num of messages and replies to the original message with data of any valid repostable messages in the channel it was called in (*this command ignores the monitored channel list*). Depending on the input, this command can take some time to complete, so when finished, plugbot will reply appropriately to let you know it's done. If no valid repostable messages according to the current parameters are found, plugbot replies as such.
 
 ## Configuration and Integration Commands
 

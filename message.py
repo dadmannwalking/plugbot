@@ -120,9 +120,9 @@ def description_from(data: dict) -> str:
     embeds = data.get("embeds", [])
     
     if embeds and embeds[0].get("title"):
-        description = embeds[0]["title"]
-    else:
-        description = ""
+        return embeds[0]["title"]
+
+    return ""
 
 def url_from(data: dict) -> str:
     url_pattern = re.compile(r"https?://[^\s)>\]]+")
@@ -146,10 +146,11 @@ def url_from(data: dict) -> str:
 def thumbnail_url_from(data: dict) -> str:
     embeds = data.get("embeds", [])
     content = data.get("content", "")
-    img_url = None
+    img_url = ""
 
     if embeds:
         embed = embeds[0]
+        url = embed.get("url", "") or ""
         
         # Step 1: image_url
         if embed.get("image_url"):
@@ -183,10 +184,4 @@ def handle(message: Message):
     url = url_from(data=data)
     thumbnail = thumbnail_url_from(data=data)
 
-    if title is None or url is None:
-        print(f"Unable to construct data from [{json_from(message)}]")
-        test = ""
-    else:
-        test = f"{title} {description}"
-
-    return title, description, url, thumbnail, test
+    return title, description, url, thumbnail
