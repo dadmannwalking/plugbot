@@ -6,14 +6,13 @@ import os
 import json
 import asyncio
 
+# Helper imports
 from config import get_config, set_config
+import message as msghelper
 
 # Social media handler imports
 import twitter
 import bluesky
-
-# Helper imports
-import message as msghelper
 
 def taglog(msg):
     print(f"[MAIN] {msg}")
