@@ -300,6 +300,18 @@ async def on_ready():
 async def on_guild_join(guild):
     print(f"{guild.name} has added plugbot [{guild.id}]")
 
+@bot.event
+async def on_guild_remove(guild):
+    print(f"{guild.name} has removed plugbot [{guild.id}]")
+
+@bot.event
+async def on_guild_remove(member):
+    print(f"{member.name} has joined {member.guild.id}]")
+
+@bot.event
+async def on_member_remove(member):
+    print(f"{member.name} has left/been removed from {member.guild.id}]")
+
 # Monitor messages sent in channels
 @bot.event
 async def on_message(message):
