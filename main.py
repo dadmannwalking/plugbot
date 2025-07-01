@@ -40,9 +40,75 @@ bot = commands.Bot(command_prefix='!pb_', intents=intents)
 # ================================================================================================ #
 # ================================================================================================ #
 
+# Test basic plugbot integration
 @bot.command()
 async def test(ctx):
+    config = get_config(ctx.guild.id)
+    if config.authorized(ctx.author, ctx.guild) == False:
+        return
+
     await ctx.reply("hello there")
+
+# Change admin role for current guild
+@bot.command()
+async def role(ctx, *, msg):
+    config = get_config(ctx.guild.id)
+    if config.authorized(ctx.author, ctx.guild) == False:
+        return
+
+    for role in ctx.guild.roles:
+        if role.name == msg:
+            config.configuration_role = msg
+            set_config(config, ctx.guild.id)
+            return await ctx.reply(f'admin role has been changed to {msg}')
+
+    await ctx.reply(f"{msg} role not found")
+
+# List, add, or remove channels from monitored channels
+@bot.command()
+async def channels(ctx, *, msg):
+    print(0)
+    config = get_config(ctx.guild.id)
+    if config.authorized(ctx.author, ctx.guild) == False:
+        return
+
+    components = msg.split()
+
+    if len(components) == 1 and components[0] == "list":
+        if config.watched_channels:
+            channels_list = "\n".join(f"`{cid}`" for cid in config.watched_channels)
+            await ctx.reply(f"Currently monitored channels:\n{channels_list}")
+        else:
+            await ctx.reply("No channels are currently being monitored.")
+        return
+
+    if len(components) == 2 and components[0] in ["add", "remove"]:
+        try:
+            channel_id = int(components[1])
+            guild_channel_ids = [channel.id for channel in ctx.guild.channels]
+
+            if channel_id not in guild_channel_ids:
+                return await ctx.reply(f"`{channel_id}` is not a valid channel id in this guild")
+
+            if components[0] == "add":
+                if channel_id in config.watched_channels:
+                    return await ctx.reply(f"Channel `{channel_id}` is already being monitored.")
+                config.watched_channels.append(channel_id)
+                set_config(config, ctx.guild.id)
+                return await ctx.reply(f"Channel `{channel_id}` added to monitored channels.")
+            
+            if components[0] == "remove":
+                if channel_id not in config.watched_channels:
+                    return await ctx.reply(f"Channel `{channel_id}` is not currently monitored.")
+                config.watched_channels.remove(channel_id)
+                set_config(config, ctx.guild.id)
+                return await ctx.reply(f"Channel `{channel_id}` removed from monitored channels.")
+        except Exception as e:
+            taglog(f"Exception in channels command: {e}")
+            await ctx.reply(f"Invalid channel ID: `{components[1]}`")
+        return
+
+    await ctx.reply(f"unable to parse command parameters: `{msg}`")
 
 # Register channel for message monitoring
 @bot.command()
@@ -50,7 +116,7 @@ async def sub(ctx, *, msg):
     config = get_config(ctx.guild.id)
     watched_channels = config.watched_channels
 
-    if config.authorized(ctx.author) == False:
+    if config.authorized(ctx.author, ctx.guild) == False:
         return
 
     try:
@@ -71,7 +137,7 @@ async def unsub(ctx, *, msg):
     config = get_config(ctx.guild.id)
     watched_channels = config.watched_channels
 
-    if config.authorized(ctx.author) == False:
+    if config.authorized(ctx.author, ctx.guild) == False:
         return
 
     try:
@@ -91,7 +157,7 @@ async def unsub(ctx, *, msg):
 async def gethistory(ctx):
     config = get_config(ctx.guild.id)
 
-    if config.authorized(ctx.author) == False:
+    if config.authorized(ctx.author, ctx.guild) == False:
         return
     
     async for message in ctx.channel.history(limit=10):
@@ -111,7 +177,7 @@ async def gethistory(ctx):
 async def twitter(ctx):
     config = get_config(ctx.guild.id)
 
-    if config.authorized(ctx.author) == False:
+    if config.authorized(ctx.author, ctx.guild) == False:
         return
     
     await ctx.reply("Twitter integration is currently disabled, sorry!")
@@ -122,7 +188,7 @@ async def twitter(ctx):
 async def testtwitter(ctx, *, msg):
     config = get_config(ctx.guild.id)
 
-    if config.authorized(ctx.author) == False:
+    if config.authorized(ctx.author, ctx.guild) == False:
         return
     
     await ctx.reply('Twitter not yet integrated...')
@@ -132,7 +198,7 @@ async def testtwitter(ctx, *, msg):
 async def testbluesky(ctx, *, msg):
     config = get_config(ctx.guild.id)
 
-    if config.authorized(ctx.author) == False:
+    if config.authorized(ctx.author, ctx.guild) == False:
         return
     
     await bluesky.test(ctx, msg, config.bluesky)
@@ -143,7 +209,7 @@ async def enablebluesky(ctx, *, msg):
     # The user should call this with two parameters, divided by a space
     # The first parameter is the bot's username and the second is the password
     config = get_config(ctx.guild.id)
-    if config.authorized(ctx.author) == False:
+    if config.authorized(ctx.author, ctx.guild) == False:
         return
     
     components = msg.split()
@@ -183,6 +249,7 @@ async def on_message(message):
     config = get_config(message.guild.id)
 
     if config.confirm(message) == False:
+        taglog(f'user not authorized, process {message.content}')
         await bot.process_commands(message)
         return
     
@@ -197,6 +264,7 @@ async def on_message(message):
 
     # NOTE: always required, this function is effectively an override allows continued
     # handling of other messages
+    taglog(f'fallthrough, process {message.content}')
     await bot.process_commands(message)
 
 # ================================================================================================ #

@@ -90,7 +90,10 @@ class Config:
     # For some reason, commands.has_role() does not like the role being configured via json,
     # so this function will determine if a given user has authorization to use a protected
     # function
-    def authorized(self, user) -> bool:
+    def authorized(self, user, guild) -> bool:
+        if guild.owner and user == guild.owner:
+            return True
+
         for role in user.roles:
             if role.name == self.configuration_role:
                 return True
