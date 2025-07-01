@@ -318,23 +318,31 @@ async def enablebluesky(ctx, *, msg):
 async def on_ready():
     print(f"{bot.user.name}, reporting for duty!")
 
+# plugbot was removed from a guild
+# - should add empty config for guild??
 @bot.event
 async def on_guild_join(guild):
     print(f"{guild.name} has added plugbot [{guild.id}]")
 
+# plugbot was removed from a guild
+# - should remove the config for that guild
 @bot.event
 async def on_guild_remove(guild):
     print(f"{guild.name} has removed plugbot [{guild.id}]")
 
-@bot.event
-async def on_guild_remove(member):
-    print(f"{member.name} has joined {member.guild.id}]")
-
+# A user left or was removed from a guild
+# plugbot should only do something under the following conditions:
+# - user is in the list of permitted users -> remove from list
 @bot.event
 async def on_member_remove(member):
-    print(f"{member.name} has left/been removed from {member.guild.id}]")
+    config = get_config(member.guild.id)
+    if member.id in config.permitted_users:
+        taglog(f"on_member_remove: removing {member.id} from permitted users")
+        config.permitted_users.remove(member.id)
+        set_config(config, member.guild.id)
 
-# Monitor messages sent in channels
+# Monitor messages sent in channels and post messages that match the
+# criteria in the config to any enabled social media services
 @bot.event
 async def on_message(message):
     config = get_config(message.guild.id)
