@@ -67,7 +67,6 @@ async def role(ctx, *, msg):
 # List, add, or remove channels from monitored channels
 @bot.command()
 async def channels(ctx, *, msg):
-    print(0)
     config = get_config(ctx.guild.id)
     if config.authorized(ctx.author, ctx.guild) == False:
         return
@@ -110,47 +109,44 @@ async def channels(ctx, *, msg):
 
     await ctx.reply(f"unable to parse command parameters: `{msg}`")
 
-# Register channel for message monitoring
+# List, add, or remove keyword phrases from the list
 @bot.command()
-async def sub(ctx, *, msg):
+async def keywords(ctx, *, msg):
     config = get_config(ctx.guild.id)
-    watched_channels = config.watched_channels
-
     if config.authorized(ctx.author, ctx.guild) == False:
         return
 
-    try:
-        channel_id = int(msg.strip())
-        if channel_id in watched_channels:
-            await ctx.reply(f"{channel_id} is already monitored")
+    components = msg.split(maxsplit=1)
+    action = components[0]
+
+    if action == "list":
+        if config.keywords:
+            keywords_list = "\n".join(f"`{kw}`" for kw in config.keywords)
+            return await ctx.reply(f"Currently filtering for these phrases:\n{keywords_list}")
         else:
-            watched_channels.append(channel_id)
-            config.watched_channels = watched_channels
-            set_config(config, ctx.guild.id)
-            await ctx.reply(f"added {channel_id} to monitored channels")
-    except ValueError:
-        await ctx.reply(f"{msg} is not a valid channel id")
-
-# Remove channel from message monitoring
-@bot.command()
-async def unsub(ctx, *, msg):
-    config = get_config(ctx.guild.id)
-    watched_channels = config.watched_channels
-
-    if config.authorized(ctx.author, ctx.guild) == False:
+            await ctx.reply("No key phrase filters are currently applied.")
         return
 
-    try:
-        channel_id = int(msg.strip())
-        if channel_id in watched_channels:
-            watched_channels.remove(channel_id)
-            config.watched_channels = watched_channels
+    if len(components) == 2 and action in ["add", "remove"]:
+        phrase = components[1].strip().lower()
+
+        if action == "add":
+            if phrase in config.keywords:
+                return await ctx.reply(f"Key phrase `{phrase}` already exists.")
+
+            config.keywords.append(phrase)
             set_config(config, ctx.guild.id)
-            await ctx.reply(f"removed {channel_id} from monitored channels")
-        else:
-            await ctx.reply(f"{channel_id} is not currently monitored")
-    except ValueError:
-        await ctx.reply(f"{msg} is not a valid channel id")
+            return await ctx.reply(f"Key phrase `{phrase}` added.")
+
+        if action == "remove":
+            if phrase not in config.keywords:
+                return await ctx.reply(f"Key phrase `{phrase}` does not exist.")
+
+            config.keywords.remove(phrase)
+            set_config(config, ctx.guild.id)
+            return await ctx.reply(f"Key phrase `{phrase}` removed.")
+
+    await ctx.reply(f"unable to parse command parameters: `{msg}`")
 
 # Get and print message history
 @bot.command()
