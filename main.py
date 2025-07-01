@@ -74,6 +74,7 @@ async def channels(ctx, *, msg):
     components = msg.split()
 
     if len(components) == 1 and components[0] == "list":
+        # TODO: Handle listing both channel IDs and channel names
         if config.watched_channels:
             channels_list = "\n".join(f"`{cid}`" for cid in config.watched_channels)
             await ctx.reply(f"Currently monitored channels:\n{channels_list}")
@@ -82,6 +83,7 @@ async def channels(ctx, *, msg):
         return
 
     if len(components) == 2 and components[0] in ["add", "remove"]:
+        # TODO: Handle accepting both channel IDs and channel names; should print out both channel name and ID, but only add channel ID to config
         try:
             channel_id = int(components[1])
             guild_channel_ids = [channel.id for channel in ctx.guild.channels]
@@ -145,6 +147,65 @@ async def filters(ctx, *, msg):
             config.keywords.remove(phrase)
             set_config(config, ctx.guild.id)
             return await ctx.reply(f"Key phrase `{phrase}` removed.")
+
+    await ctx.reply(f"unable to parse command parameters: `{msg}`")
+
+# List, add, or remove users from the list of monitored users
+@bot.command()
+async def users(ctx, *, msg):
+    config = get_config(ctx.guild.id)
+    if config.authorized(ctx.author, ctx.guild) == False:
+        return
+
+    components = msg.strip().split()
+    action = components[0]
+
+    if action == "list":
+        if config.permitted_users:
+            users_list = "\n".join(
+                f"{member.display_name} ({member.id})" if (member := ctx.guild.get_member(user_id)) 
+                else f"Unknown User ({user_id})"
+                for user_id in config.permitted_users
+            )
+            await ctx.reply(f"Currently reposting messages from these users:\n{users_list}")
+        else:
+            await ctx.reply("Messages from all users in monitored channels are currently being reposted.")
+        return
+    
+    if len(components) == 2 and action in ["add", "remove"]:
+        identifier = components[1].strip().lower()
+        found_user = None
+
+        try: 
+            user_id = int(identifier)
+            found_user = next((user for user in ctx.guild.members if user.id == user_id), None)
+        except Exception as e:
+            found_user = next(
+                (user for user in ctx.guild.members 
+                 if (user.name.lower() == identifier or user.display_name.lower() == identifier)), 
+                 None
+            )
+
+        if found_user is None:
+            return await ctx.reply(f"User {components[1]} not found in guild.")
+
+        user_string = f"{found_user.display_name} ({found_user.id})"
+
+        if action == "add":
+            if found_user.id in config.permitted_users:
+                return await ctx.reply(f"`{user_string}` already monitored.")
+            
+            config.permitted_users.append(found_user.id)
+            set_config(config, ctx.guild.id)
+            return await ctx.reply(f"Added `{user_string}` to monitored users.")
+
+        if action == "remove":
+            if found_user.id not in config.permitted_users:
+                return await ctx.reply(f"`{user_string}` not monitored.")
+
+            config.permitted_users.remove(found_user.id)
+            set_config(config, ctx.guild.id)
+            return await ctx.reply(f"Removed `{user_string}` from monitored users.")
 
     await ctx.reply(f"unable to parse command parameters: `{msg}`")
 

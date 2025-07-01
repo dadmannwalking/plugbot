@@ -106,7 +106,7 @@ class Config:
             taglog("ignore messages from plugbot")
             return False
 
-        if self.permitted_users != [] and message.author.name not in self.permitted_users:
+        if self.permitted_users != [] and message.author.id not in self.permitted_users:
             taglog(f"ignore messages from non-permitted user {message.author.name}")
             return False
 
