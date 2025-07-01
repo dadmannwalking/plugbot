@@ -1,6 +1,10 @@
 # Discord Message to Social Media Bot
 
-This is a Python-based Discord bot that watches specified Discord channels for messages and auto-posts those messages to given social media accounts (e.g., Twitter, Facebook, etc.).
+This is a Python-based Discord bot that watches specified Discord channels for messages and auto-posts those messages to enabled and configured social media accounts.
+
+## How plugbot Works
+
+Plugbot monitors channels in your Discord server added by users with appropriate access (server mods) for any incoming messages from users specified by mods where the message contains key words and phrases specified by server mods. If plugbot finds a message that meets all of its criteria, plugbot will repost the message to all social media services enabled and configured by the server mods.
 
 ## Security
 
@@ -20,10 +24,7 @@ plugbot is designed with security in mind. To use plugbot's commands, a user in 
 
 `!pb_filters list` replies with a list of all currently active key phrases.
 
-`!pb_filters add <phrase>` adds the given phrase to the current list of key phrases. **Please note** the following ruleset applies to key phrases:
-- All phrases are case-insensitive
-- If keywords are provided, at least one match is required to be a valid repostable message
-- If no keywords are provided, no messages will be filtered
+`!pb_filters add <phrase>` adds the given phrase to the current list of key phrases. **Please note** that all added phrases are case-insensitive. Additionally, if keywords are provided, at least one match is required to be a valid repostable message, but if no keywords are provided, no messages will be filtered and all messages matching all other criteria will be reposted.
 
 `!pb_filters remove <phrase>` replies with a list of all currently active key phrases.
 
