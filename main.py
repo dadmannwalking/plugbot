@@ -111,7 +111,7 @@ async def channels(ctx, *, msg):
 
 # List, add, or remove keyword phrases from the list
 @bot.command()
-async def keywords(ctx, *, msg):
+async def filters(ctx, *, msg):
     config = get_config(ctx.guild.id)
     if config.authorized(ctx.author, ctx.guild) == False:
         return

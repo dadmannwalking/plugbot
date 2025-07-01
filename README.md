@@ -18,11 +18,20 @@ plugbot is designed with security in mind. To use plugbot's commands, a user in 
 
 `!pb_channels remove <channel_id>` removes a channel with the given ID from monitoring by plugbot.
 
-`!pb_keywords list` replies with a list of all currently active keywords.
+`!pb_filters list` replies with a list of all currently active key phrases.
 
-`!pb_keywords add <phrase>` adds the given phrase to the current list of keywords.
+`!pb_filters add <phrase>` adds the given phrase to the current list of key phrases. Please note the following ruleset applies to key phrases:
+- All phrases are case-insensitive
+- If keywords are provided, at least one match is required to be a valid repostable message
+- If no keywords are provided, no messages will be filtered
 
-`!pb_keywords remove <phrase>` replies with a list of all currently active keywords.
+`!pb_filters remove <phrase>` replies with a list of all currently active key phrases.
+
+`!pb_users list`
+
+`!pb_users add <username>`
+
+`!pb_users remove <username>`
 
 `!pb_gethistory` replies to the original message with JSON representations of any valid repostable messages of the last 10 messages in the channel it was called in.
 
