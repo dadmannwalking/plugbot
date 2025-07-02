@@ -66,6 +66,9 @@ async def role(ctx, *, msg):
 # List, add, or remove channels from monitored channels
 @bot.command()
 async def channels(ctx, *, msg):
+    def strip_non_ascii(text: str) -> str:
+        return ''.join(char for char in text if ord(char) < 128).strip().lower()
+
     config = get_config(ctx.guild.id)
     if config.authorized(ctx.author, ctx.guild) == False:
         return
@@ -73,40 +76,47 @@ async def channels(ctx, *, msg):
     components = msg.split()
 
     if len(components) == 1 and components[0] == "list":
-        # TODO: Handle listing both channel IDs and channel names
         if config.watched_channels:
-            channels_list = "\n".join(f"`{cid}`" for cid in config.watched_channels)
+            channels_list = "\n".join(
+                f"<#{cid}> (`{cid}`)"
+                for cid in config.watched_channels
+                if any(ch.id == cid for ch in ctx.guild.channels)
+            )
             await ctx.reply(f"Currently monitored channels:\n{channels_list}")
         else:
             await ctx.reply("No channels are currently being monitored.")
         return
 
     if len(components) == 2 and components[0] in ["add", "remove"]:
-        # TODO: Handle accepting both channel IDs and channel names; should print out both channel name and ID, but only add channel ID to config
+        found_channel = None
+        identifier = components[1]
+        identifier = identifier.lstrip("#")
+
         try:
-            channel_id = int(components[1])
-            guild_channel_ids = [channel.id for channel in ctx.guild.channels]
+            channel_id = int(identifier)
+            found_channel = next((channel for channel in ctx.guild.channels if channel.id == channel_id), None)
+        except ValueError as e:
+            channel_name = strip_non_ascii(identifier)
+            found_channel = next((channel for channel in ctx.guild.channels if strip_non_ascii(channel.name) == channel_name), None)
 
-            if channel_id not in guild_channel_ids:
-                return await ctx.reply(f"`{channel_id}` is not a valid channel id in this guild")
+        if found_channel is None:
+            return await ctx.reply(f"`{identifier}` is not a valid channel in this guild")
 
-            if components[0] == "add":
-                if channel_id in config.watched_channels:
-                    return await ctx.reply(f"Channel `{channel_id}` is already being monitored.")
-                config.watched_channels.append(channel_id)
-                set_config(config, ctx.guild.id)
-                return await ctx.reply(f"Channel `{channel_id}` added to monitored channels.")
-            
-            if components[0] == "remove":
-                if channel_id not in config.watched_channels:
-                    return await ctx.reply(f"Channel `{channel_id}` is not currently monitored.")
-                config.watched_channels.remove(channel_id)
-                set_config(config, ctx.guild.id)
-                return await ctx.reply(f"Channel `{channel_id}` removed from monitored channels.")
-        except Exception as e:
-            taglog(f"Exception in channels command: {e}")
-            await ctx.reply(f"Invalid channel ID: `{components[1]}`")
-        return
+        channel_callout = f"{found_channel.id} ({found_channel.id})"
+
+        if components[0] == "add":
+            if found_channel.id in config.watched_channels:
+                return await ctx.reply(f"Channel `{channel_callout}` is already being monitored.")
+            config.watched_channels.append(found_channel.id)
+            set_config(config, ctx.guild.id)
+            return await ctx.reply(f"Channel `{channel_callout}` added to monitored channels.")
+        
+        if components[0] == "remove":
+            if found_channel.id not in config.watched_channels:
+                return await ctx.reply(f"Channel `{channel_callout}` is not currently monitored.")
+            config.watched_channels.remove(found_channel.id)
+            set_config(config, ctx.guild.id)
+            return await ctx.reply(f"Channel `{channel_callout}` removed from monitored channels.")
 
     await ctx.reply(f"unable to parse command parameters: `{msg}`")
 
