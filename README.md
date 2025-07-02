@@ -16,11 +16,11 @@ plugbot is designed with security in mind. To use plugbot's commands, a user in 
 
 `!pb_role <role>` changes the role required to use plugbot's commands. By default, the role used is simply 'admin'. In all cases, the server owner can **always** use plugbot's commands. **Please note** that this role is case-sensitive and **MUST** be a role within your server.
 
-`!pb_channels list` replies with a list of all currently monitored channel IDs.
+`!pb_channels list` replies with a list of all currently monitored channels.
 
-`!pb_channels add <channel_id>` subscribes a channel with the given ID to be monitored by plugbot. After subscribed, plugbot will repost any valid repostable messages to all enabled and configured services.
+`!pb_channels add <channel>` subscribes a channel with the given ID or name to be monitored by plugbot. After subscribed, plugbot will repost any valid repostable messages to all enabled and configured services. **Please note** that when using a name with this command, it is not case-sensitive. Additionally, any identifiers or emojis included in the channel name will be stripped while searching for the channel.
 
-`!pb_channels remove <channel_id>` removes a channel with the given ID from monitoring by plugbot.
+`!pb_channels remove <channel>` removes a channel with the given ID or name from monitoring by plugbot. **Please note** that when using a name with this command, it is not case-sensitive. Additionally, any identifiers or emojis included in the channel name will be stripped while searching for the channel.
 
 `!pb_filters list` replies with a list of all currently active key phrases.
 
