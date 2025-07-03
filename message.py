@@ -116,13 +116,50 @@ def title_from(data: dict) -> str:
 
     return post_title
 
-def description_from(data: dict) -> str:
+async def description_from(data: dict, message: Message) -> str:
     embeds = data.get("embeds", [])
-    
+
     if embeds and embeds[0].get("title"):
         return embeds[0]["title"]
 
-    return ""
+    content = data.get("content", message.content or "")
+
+    # Sanitize @everyone and @here
+    content = re.sub(r"@everyone", "everyone", content)
+    content = re.sub(r"@here", "here", content)
+
+    # Replace channel mentions
+    def replace_channel(match):
+        channel_id = int(match.group(1))
+        channel = message.guild.get_channel(channel_id)
+        return f"#{channel.name}" if channel else "#channel"
+
+    content = re.sub(r"<#(\d+)>", replace_channel, content)
+
+    # Replace role mentions
+    def replace_role(match):
+        role_id = int(match.group(1))
+        role = message.guild.get_role(role_id)
+        return f"@{role.name}" if role else "@role"
+
+    content = re.sub(r"<@&(\d+)>", replace_role, content)
+
+    # Replace user mentions
+    async def replace_user(match):
+        user_id = int(match.group(1))
+        member = message.guild.get_member(user_id) or await message.guild.fetch_member(user_id)
+        return f"@{member.display_name}" if member else "@user"
+
+    # Process <@123> and <@!123> mentions one by one
+    user_mention_pattern = r"<@!?(\d+)>"
+    matches = list(re.finditer(user_mention_pattern, content))
+
+    for match in reversed(matches):
+        replacement = await replace_user(match)
+        start, end = match.span()
+        content = content[:start] + replacement + content[end:]
+
+    return content.strip()
 
 def url_from(data: dict) -> str:
     url_pattern = re.compile(r"https?://[^\s)>\]]+")
@@ -177,10 +214,10 @@ def thumbnail_url_from(data: dict) -> str:
 
     return img_url
 
-def handle(message: Message):
+async def handle(message: Message):
     data = json.loads(json_from(message=message))
     title = title_from(data=data)
-    description = description_from(data=data)
+    description = await description_from(data=data, message=message)
     url = url_from(data=data)
     thumbnail = thumbnail_url_from(data=data)
 

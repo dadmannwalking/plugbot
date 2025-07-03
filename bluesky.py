@@ -1,4 +1,5 @@
 from atproto import AsyncClient, models
+from config import ServiceConfig
 import httpx
 
 client = AsyncClient()
@@ -6,7 +7,8 @@ client = AsyncClient()
 def taglog(msg):
     print(f"[BLUESKY] {msg}")
 
-async def login(ctx, config):
+async def login(ctx, config: ServiceConfig) -> bool:
+    taglog(f"starting login... [{config.username} | {config.password}]")
     if config is None or config.username is None or config.password is None:
         await ctx.reply("Bluesky config is malformed")
         return False
@@ -15,29 +17,30 @@ async def login(ctx, config):
         config.username if config.username.endswith(".bsky.social")
         else f"{config.username}.bsky.social"
     )
-    taglog(f"logging into bluesky [{corrected_username}]...")
+    taglog(f"logging in [{corrected_username}]...")
 
     try:
         await client.login(corrected_username, config.password)
-        taglog("Bluesky login successful.")
+        taglog("login successful!")
         return True
     except Exception as e:
         taglog(f"Bluesky login failed: {e}")
-        await ctx.reply("Bluesky login failed.")
         return False
 
-async def test(ctx, msg, config):
+async def test(ctx, msg: str, config: ServiceConfig):
+    if not msg.strip():
+        await ctx.reply("Cannot send an empty message.")
+        return
+
     if not await login(ctx, config):
         await ctx.reply("Bluesky login failed, cannot send test message.")
         return
 
-    title = "dadmannwalking published a new video on YouTube"
-    description = "StoneVania VOD | Chilled Out Interior Decoration | dadmannwalking on #twitch"
-    url = "https://youtu.be/JqBYhpD_8Pg"
-    thumbnail = "https://i.ytimg.com/vi/qXWTOAuR4tw/maxresdefault.jpg"
-
-    await create_post(title, description, url, thumbnail, ctx, config, skip_login=True)
-    await ctx.reply("test message was sent!")
+    try:
+        await client.send_post(text=msg)
+        await ctx.reply("Test message sent successfully!")
+    except Exception as e:
+        await ctx.reply(f"Failed to send test message: {e}")
 
 async def create_post(title, description, url, thumbnail, ctx, config, skip_login=False):
     if not skip_login and not await login(ctx, config):
@@ -87,3 +90,10 @@ async def create_post(title, description, url, thumbnail, ctx, config, skip_logi
     taglog(f"created external embed [{external_embed}]")
     
     await client.send_post(text=plaintext, facets=[facet], embed=external_embed)
+
+async def create_text_post(text, ctx, config, skip_login=False):
+    if not skip_login and not await login(ctx, config):
+        await ctx.reply("Bluesky login failed, cannot create post.")
+        return
+
+    await client.send_post(text=text)

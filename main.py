@@ -14,6 +14,13 @@ import message as msghelper
 import twitter
 import bluesky
 
+class DummyCtx:
+    def __init__(self, message):
+        self.message = message
+
+    async def reply(self, msg):
+        await self.message.reply(msg)
+
 def taglog(msg):
     print(f"[MAIN] {msg}")
 
@@ -102,7 +109,7 @@ async def channels(ctx, *, msg):
         if found_channel is None:
             return await ctx.reply(f"`{identifier}` is not a valid channel in this guild")
 
-        channel_callout = f"{found_channel.id} ({found_channel.id})"
+        channel_callout = f"{found_channel.name} ({found_channel.id})"
 
         if components[0] == "add":
             if found_channel.id in config.watched_channels:
@@ -235,7 +242,7 @@ async def gethistory(ctx, *, msg):
         limit = int(msg.strip())
         valid_messages_found = False
         async for message in ctx.channel.history(limit=limit):
-            title, desc, url, thumb = msghelper.handle(message)
+            title, desc, url, thumb = await msghelper.handle(message)
             message_json = msghelper.json_from(message)
             
             if config.confirm(message, message_json, True) == False:
@@ -282,7 +289,7 @@ async def testtwitter(ctx, *, msg):
     
     await ctx.reply('Twitter not yet integrated...')
 
-# Test bluesky instance
+# Test bluesky instance with given message
 @bot.command()
 async def testbluesky(ctx, *, msg):
     config = get_config(ctx.guild.id)
@@ -361,11 +368,22 @@ async def on_message(message):
         taglog(f'user not authorized, process {message.content}')
         await bot.process_commands(message)
         return
+
+    dummy_ctx = DummyCtx(message)
     
     if config.bluesky.enabled:
-        print("posting to Bluesky...")
-        title, description, url, thumbnail = msghelper.handle(message)
-        await bluesky.create_post(title, description, url, thumbnail, ctx, config.bluesky)
+        try:
+            taglog("Posting to Bluesky...")
+            title, description, url, thumbnail = await msghelper.handle(message)
+
+            if url is not None:
+                await bluesky.create_post(title, description, url, thumbnail, dummy_ctx, config.bluesky)
+            else:
+                await bluesky.create_text_post(description, dummy_ctx, config.bluesky)
+
+            taglog("Post sent successfully!")
+        except Exception as e:
+            taglog(f"Failed to post to Bluesky: {e}")
 
     # NOTE: always required, this function is effectively an override allows continued
     # handling of other messages
