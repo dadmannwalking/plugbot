@@ -26,7 +26,7 @@ plugbot is designed with security in mind. To use plugbot's commands, a user in 
 
 `!pb_filters add <phrase>` adds the given phrase to the current list of key phrases. **Please note** that all added phrases are case-insensitive. Additionally, if keywords are provided, at least one match is required to be a valid repostable message, but if no keywords are provided, no messages will be filtered and all messages matching all other criteria will be reposted.
 
-`!pb_filters remove <phrase>` replies with a list of all currently active key phrases.
+`!pb_filters remove <phrase>` removes thej given phrase from the current list of key phrases. **Please note** that all added phrases are case-insensitive.
 
 `!pb_users list` replies with a list of all currently monitored users.
 
