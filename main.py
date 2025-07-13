@@ -325,6 +325,16 @@ async def enablebluesky(ctx, *, msg):
     await ctx.reply("Bluesky integration enabled successfully.")
     await ctx.message.delete()
 
+# Test reddit instance with given message
+@bot.command()
+async def testreddit(ctx, *, msg):
+    taglog('testreddit')
+
+# Enable and configure reddit instance
+@bot.command()
+async def enablereddit(ctx, *, msg):
+    taglog('testreddit')
+
 # ================================================================================================ #
 # ================================================================================================ #
 # =========================================== EVENTS ============================================= #
